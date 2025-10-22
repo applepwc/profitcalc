@@ -39,12 +39,12 @@ function calculateMetrics(P, L, Tpercent, Dpercent, R1percent, R2percent) {
   const R1 = percentToFactor(R1n)
   const R2 = percentToFactor(R2n)
 
-  const oneMinusT = 1 - T
   const oneMinusD = 1 - D
-  const productP = Pn * oneMinusT
+  const oneMinusT = 1 - T
+  const productP = Pn * oneMinusD
   const pre = productP - Ln
-  const GP = pre * oneMinusD
-  const GP1 = GP * R1
+  const GP = pre * oneMinusT
+  const GP1 = pre * R1
   const GP2 = GP * R2
   const NP = GP - GP1 - GP2
   const GPR = Pn !== 0 ? GP / Pn : NaN
@@ -116,27 +116,27 @@ export default function App() {
     const R1 = percentToFactor(R1percent)
     const R2 = percentToFactor(R2percent)
 
-    const oneMinusT = 1 - T
     const oneMinusD = 1 - D
-    const productP = P * oneMinusT
+    const oneMinusT = 1 - T
+    const productP = P * oneMinusD
     const pre = productP - L
-    const GP = pre * oneMinusD
-    const GP1 = GP * R1
+    const GP = pre * oneMinusT
+    const GP1 = pre * R1
     const GP2 = GP * R2
     const NP = GP - GP1 - GP2
 
     const stepsText = []
     // 毛利（GP）计算分步展示
-    stepsText.push('毛利 = (中标价 × (1 - 费用) - 底价) × (1 - 配送费率)')
-    stepsText.push(`     = (${formatNumber(P)} × (1 - ${formatNumber(Tpercent, 2)}%) - ${formatNumber(L)}) × (1 - ${formatNumber(Dpercent, 2)}%)`)
-    stepsText.push(`     = (${formatNumber(P)} × ${formatNumber(oneMinusT)} - ${formatNumber(L)}) × ${formatNumber(oneMinusD)}`)
-    stepsText.push(`     = (${formatNumber(productP)} - ${formatNumber(L)}) × ${formatNumber(oneMinusD)}`)
-    stepsText.push(`     = ${formatNumber(pre)} × ${formatNumber(oneMinusD)}`)
+    stepsText.push('毛利 = (中标价 × (1 - 配送费率) - 底价) × (1 - 费用)')
+    stepsText.push(`     = (${formatNumber(P)} × (1 - ${formatNumber(Dpercent, 2)}%) - ${formatNumber(L)}) × (1 - ${formatNumber(Tpercent, 2)}%)`)
+    stepsText.push(`     = (${formatNumber(P)} × ${formatNumber(oneMinusD)} - ${formatNumber(L)}) × ${formatNumber(oneMinusT)}`)
+    stepsText.push(`     = (${formatNumber(productP)} - ${formatNumber(L)}) × ${formatNumber(oneMinusT)}`)
+    stepsText.push(`     = ${formatNumber(pre)} × ${formatNumber(oneMinusT)}`)
     stepsText.push(`     = ${formatNumber(GP)}`)
 
     stepsText.push('')
-    stepsText.push('毛利分配1 = 毛利 × 利润分配比例1')
-    stepsText.push(`        = ${formatNumber(GP)} × ${formatNumber(R1percent, 2)}%`)
+    stepsText.push('毛利分配1 = (中标价 × (1 - 配送费率) - 底价) × 利润分配比例1')
+    stepsText.push(`        = ${formatNumber(pre)} × ${formatNumber(R1percent, 2)}%`)
     stepsText.push(`        = ${formatNumber(GP1)}`)
 
     stepsText.push('')
