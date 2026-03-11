@@ -212,7 +212,7 @@ export default function App() {
     }
 
     return [
-      { GP, GP1, GP2, NP, GPR: P !== 0 ? GP / P : NaN },
+      { GP, GP1, GP2, NP, GPR: P !== 0 ? GP / P : NaN, L },
       stepsText,
     ]
   }, [inputs, inputMode, GPRInput])
@@ -281,7 +281,7 @@ export default function App() {
 
             <div className="field">
               <div className="label-row">
-                <label htmlFor="mode">底价/毛利比</label>
+                <label htmlFor="mode">{inputMode === 'bottomPrice' ? '毛利比' : '底价'}</label>
                 <select id="mode" value={inputMode} onChange={handleModeChange} style={{ marginLeft: '8px', padding: '4px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: '#1a1f2e', color: '#aab2c5', cursor: 'pointer' }}>
                   <option value="bottomPrice">底价</option>
                   <option value="profitRatio">毛利比</option>
@@ -372,10 +372,17 @@ export default function App() {
                 <div className="label">净利</div>
                 <div className="value">{results ? formatNumber(results.NP) : '-'}</div>
               </div>
+              {inputMode === 'bottomPrice' ? (
                 <div className="kpi">
                   <div className="label">毛利比</div>
                   <div className="value">{results ? formatPercent(results.GPR, 2) : '-'}</div>
                 </div>
+              ) : (
+                <div className="kpi">
+                  <div className="label">底价</div>
+                  <div className="value">{results ? formatNumber(results.L) : '-'}</div>
+                </div>
+              )}
             </div>
 
             <div className="steps">
