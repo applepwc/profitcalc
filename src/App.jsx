@@ -24,6 +24,26 @@ function formatPercent(n, digits = 2) {
   return `${rounded.toFixed(digits)}%`
 }
 
+function calculateBottomPriceFromGPR(P, GPRtarget, Tpercent, Dpercent) {
+  const Pn = toNumber(P)
+  const GPRn = toNumber(GPRtarget)
+  const Tn = toNumber(Tpercent)
+  const Dn = toNumber(Dpercent)
+
+  if ([Pn, GPRn, Tn, Dn].some((v) => !Number.isFinite(v))) return null
+
+  const T = percentToFactor(Tn)
+  const D = percentToFactor(Dn)
+  const GPR = percentToFactor(GPRn) // Convert percentage to decimal
+  const oneMinusD = 1 - D
+  const oneMinusT = 1 - T
+
+  // L = P × (1 - D) - (GPR × P) / (1 - T)
+  if (oneMinusT === 0) return null // Avoid division by zero
+  const L = Pn * oneMinusD - (GPR * Pn) / oneMinusT
+  return L
+}
+
 function calculateMetrics(P, L, Tpercent, Dpercent, R1percent, R2percent) {
   const Pn = toNumber(P)
   const Ln = toNumber(L)
@@ -52,6 +72,7 @@ function calculateMetrics(P, L, Tpercent, Dpercent, R1percent, R2percent) {
 }
 
 export default function App() {
+  const [inputMode, setInputMode] = useState('bottomPrice') // 'bottomPrice' or 'profitRatio'
   const [inputs, setInputs] = useState({
     P: '',
     L: '',
@@ -60,6 +81,7 @@ export default function App() {
     R1: '',
     R2: '',
   })
+  const [GPRInput, setGPRInput] = useState('') // GPR input for profit ratio mode
 
   const [errors, setErrors] = useState({})
   const [clicked, setClicked] = useState(false)
@@ -74,38 +96,64 @@ export default function App() {
     const value = e.target.value
     setInputs((prev) => ({ ...prev, [key]: value }))
     if (clicked) {
-      setErrors(validate({ ...inputs, [key]: value }))
+      const newInputs = { ...inputs, [key]: value }
+      setErrors(validate(newInputs, inputMode))
     }
   }
 
-  function validate(values) {
+  const handleGPRChange = (e) => {
+    const value = e.target.value
+    setGPRInput(value)
+    if (clicked) {
+      setErrors(validate(inputs, 'profitRatio', value))
+    }
+  }
+
+  const handleModeChange = (e) => {
+    const newMode = e.target.value
+    setInputMode(newMode)
+    setErrors({})
+    // Don't reset inputs, just change mode
+  }
+
+  function validate(values, mode = inputMode, gprValue = GPRInput) {
     const nextErrors = {}
     const P = toNumber(values.P)
-    const L = toNumber(values.L)
     const T = toNumber(values.T)
     const D = toNumber(values.D)
     const R1 = toNumber(values.R1)
     const R2 = toNumber(values.R2)
 
     if (!Number.isFinite(P) || P < 0) nextErrors.P = '请输入有效的中标价 (≥ 0)'
-    if (!Number.isFinite(L) || L < 0) nextErrors.L = '请输入有效的底价 (≥ 0)'
     if (!Number.isFinite(T) || T < 0 || T > 100) nextErrors.T = '费用应在 0% ~ 100%'
     if (!Number.isFinite(D) || D < 0 || D > 100) nextErrors.D = '配送费率应在 0% ~ 100%'
     if (!Number.isFinite(R1) || R1 < 0 || R1 > 100) nextErrors.R1 = '利润分配比例1应在 0% ~ 100%'
     if (!Number.isFinite(R2) || R2 < 0 || R2 > 100) nextErrors.R2 = '利润分配比例2应在 0% ~ 100%'
-    if (Number.isFinite(P) && Number.isFinite(L) && P < L) {
-      nextErrors.P = '中标价应 ≥ 底价'
+
+    if (mode === 'bottomPrice') {
+      const L = toNumber(values.L)
+      if (!Number.isFinite(L) || L < 0) nextErrors.L = '请输入有效的底价 (≥ 0)'
+      if (Number.isFinite(P) && Number.isFinite(L) && P < L) {
+        nextErrors.P = '中标价应 ≥ 底价'
+      }
+    } else if (mode === 'profitRatio') {
+      const GPR = toNumber(gprValue)
+      if (!Number.isFinite(GPR) || GPR < 0 || GPR > 100) {
+        nextErrors.GPR = '毛利比应在 0% ~ 100%'
+      }
     }
+
     return nextErrors
   }
 
   const [results, steps] = useMemo(() => {
     const P = toNumber(inputs.P)
-    const L = toNumber(inputs.L)
     const Tpercent = toNumber(inputs.T)
     const Dpercent = toNumber(inputs.D)
     const R1percent = toNumber(inputs.R1)
     const R2percent = toNumber(inputs.R2)
+
+    let L = inputMode === 'bottomPrice' ? toNumber(inputs.L) : calculateBottomPriceFromGPR(P, GPRInput, Tpercent, Dpercent)
 
     if ([P, L, Tpercent, Dpercent, R1percent, R2percent].some((v) => !Number.isFinite(v))) {
       return [null, []]
@@ -155,20 +203,30 @@ export default function App() {
     stepsText.push(`     = ${formatNumber(GP)} / ${formatNumber(P)}`)
     stepsText.push(`     = ${formatPercent(P !== 0 ? GP / P : NaN, 2)}`)
 
+    // Add bottom price info in profit ratio mode
+    if (inputMode === 'profitRatio') {
+      stepsText.push('')
+      stepsText.push(`[反向计算] 目标毛利比: ${formatNumber(toNumber(GPRInput), 2)}`)
+      stepsText.push(`底价 = 中标价 × (1 - 配送费率) - (目标毛利比 × 中标价) / (1 - 费用)`)
+      stepsText.push(`    = ${formatNumber(L)}`)
+    }
+
     return [
       { GP, GP1, GP2, NP, GPR: P !== 0 ? GP / P : NaN },
       stepsText,
     ]
-  }, [inputs])
+  }, [inputs, inputMode, GPRInput])
 
   const onCompute = () => {
     setClicked(true)
-    const nextErrors = validate(inputs)
+    const nextErrors = validate(inputs, inputMode, GPRInput)
     setErrors(nextErrors)
   }
 
   const onReset = () => {
     setInputs({ P: '', L: '', T: '', D: '', R1: '', R2: '' })
+    setGPRInput('')
+    setInputMode('bottomPrice')
     setErrors({})
     setClicked(false)
   }
@@ -222,10 +280,26 @@ export default function App() {
             </div>
 
             <div className="field">
-              <div className="label-row"><label htmlFor="L">底价</label></div>
-              <input id="L" type="number" placeholder="例如 1.85" inputMode="decimal" step="0.0001"
-                value={inputs.L} onChange={handleChange('L')} />
-              {errors.L ? <div className="error">{errors.L}</div> : null}
+              <div className="label-row">
+                <label htmlFor="mode">底价/毛利比</label>
+                <select id="mode" value={inputMode} onChange={handleModeChange} style={{ marginLeft: '8px', padding: '4px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: '#1a1f2e', color: '#aab2c5', cursor: 'pointer' }}>
+                  <option value="bottomPrice">底价</option>
+                  <option value="profitRatio">毛利比</option>
+                </select>
+              </div>
+              {inputMode === 'bottomPrice' ? (
+                <>
+                  <input id="L" type="number" placeholder="例如 1.85" inputMode="decimal" step="0.0001"
+                    value={inputs.L} onChange={handleChange('L')} />
+                  {errors.L ? <div className="error">{errors.L}</div> : null}
+                </>
+              ) : (
+                <>
+                  <input id="GPR" type="number" placeholder="例如 20 (表示 20%)" inputMode="decimal" step="0.01"
+                    value={GPRInput} onChange={handleGPRChange} />
+                  {errors.GPR ? <div className="error">{errors.GPR}</div> : <div className="hint">0 ~ 100</div>}
+                </>
+              )}
             </div>
 
             <div className="field">
