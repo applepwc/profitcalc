@@ -281,8 +281,7 @@ export default function App() {
 
             <div className="field">
               <div className="label-row">
-                <label htmlFor="mode">{inputMode === 'bottomPrice' ? '毛利比' : '底价'}</label>
-                <select id="mode" value={inputMode} onChange={handleModeChange} style={{ marginLeft: '8px', padding: '4px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: '#1a1f2e', color: '#aab2c5', cursor: 'pointer' }}>
+                <select id="mode" value={inputMode} onChange={handleModeChange} style={{ padding: '4px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: '#1a1f2e', color: '#aab2c5', cursor: 'pointer' }}>
                   <option value="bottomPrice">底价</option>
                   <option value="profitRatio">毛利比</option>
                 </select>
@@ -295,7 +294,7 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <input id="GPR" type="number" placeholder="例如 20 (表示 20%)" inputMode="decimal" step="0.01"
+                  <input id="GPR" type="number" placeholder="例如 20" inputMode="decimal" step="0.01"
                     value={GPRInput} onChange={handleGPRChange} />
                   {errors.GPR ? <div className="error">{errors.GPR}</div> : <div className="hint">0 ~ 100</div>}
                 </>
